@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Collections.Concurrent;
 using UnityEngine;
+using System.IO;
 
 public class ServerNetwork : MonoBehaviour
 {
@@ -57,9 +58,60 @@ public class ServerNetwork : MonoBehaviour
     private void ReceiveLoop(TcpClient client)
     {
         NetworkStream stream = client.GetStream();
-        byte[] buffer = new byte[7];
+        byte[] headerBuffer = new byte[4];
 
-        stream.BeginRead(buffer, 0, buffer.Length, OnReadComplete, new object[] { stream, buffer, client });
+        stream.BeginRead(headerBuffer, 0, headerBuffer.Length, OnReadHeader, new object[] { stream, headerBuffer, client });
+    }
+
+    private void OnReadHeader(IAsyncResult ar)
+    {
+        object[] state = (object[])ar.AsyncState;
+        NetworkStream stream = (NetworkStream)state[0];
+        byte[] headerBuffer = (byte[])state[1];
+        TcpClient client = (TcpClient)state[2];
+
+        try
+        {
+            int bytesRead = stream.EndRead(ar);
+            if (bytesRead == 0) { CloseClient(client); return; }
+
+            short packetSize = BitConverter.ToInt16(headerBuffer, 0);
+            PacketType packetType = (PacketType)BitConverter.ToInt16(headerBuffer, 2);
+
+            byte[] bodyBuffer = new byte[packetSize - 4];
+            stream.BeginRead(bodyBuffer, 0, bodyBuffer.Length, OnReadBody, new object[] { stream, bodyBuffer, packetType, client });
+        }
+        catch { CloseClient(client); }
+    }
+
+    private void OnReadBody(IAsyncResult ar)
+    {
+        object[] state = (object[])ar.AsyncState;
+        NetworkStream stream = (NetworkStream)state[0];
+        byte[] bodyBuffer = (byte[])state[1];
+        PacketType packetType = (PacketType)state[2];
+        TcpClient client = (TcpClient)state[3];
+
+        try
+        {
+            int bytesRead = stream.EndRead(ar);
+            if (bytesRead == 0) { CloseClient(client); return; }
+
+            using (MemoryStream ms = new MemoryStream(bodyBuffer))
+            using (BinaryReader br = new BinaryReader(ms))
+            {
+                switch (packetType)
+                {
+                    case PacketType.MoveInput:
+                        currentHorizontalInput = br.ReadSingle();
+                        if (br.ReadBoolean()) currentJumpInput = true;
+                        break;
+                }
+            }
+
+            ReceiveLoop(client);
+        }
+        catch { CloseClient(client); }
     }
 
     private void OnReadComplete(IAsyncResult ar)
@@ -144,6 +196,13 @@ public class ServerNetwork : MonoBehaviour
             NetworkStream stream = activeClient.GetStream();
             stream.Write(syncBytes, 0, syncBytes.Length); // 랜선 너머 클라이언트에게 발사!
         }
+    }
+
+    private void CloseClient(TcpClient client)
+    {
+        Debug.Log("클라이언트 연결 종료");
+        if (activeClient == client) activeClient = null;
+        client.Close();
     }
 
     void OnApplicationQuit()
