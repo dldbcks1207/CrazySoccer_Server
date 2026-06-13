@@ -63,7 +63,7 @@ public class ServerNetwork : MonoBehaviour
             short packetSize = BitConverter.ToInt16(headerBuffer, 0);
             PacketType packetType = (PacketType)BitConverter.ToInt16(headerBuffer, 2);
 
-            byte[] bodyBuffer = new byte[packetSize - 4];
+            byte[] bodyBuffer = new byte[packetSize - NetworkConfig.HeaderSize];
             stream.BeginRead(bodyBuffer, 0, bodyBuffer.Length, OnReadBody, new object[] { stream, bodyBuffer, packetType, client });
         }
         catch { CloseClient(client); }
