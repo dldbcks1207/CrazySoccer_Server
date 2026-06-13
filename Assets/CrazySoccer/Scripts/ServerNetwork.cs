@@ -20,7 +20,7 @@ public class ServerNetwork : MonoBehaviour
     void Start()
     {
         packetHandlers.Add(PacketType.MoveInput, MovePacketHandler);
-        tcpListener = new TcpListener(IPAddress.Any, 9000);
+        tcpListener = new TcpListener(IPAddress.Any, NetworkConfig.ServerPort);
         tcpListener.Start();
         Debug.Log("서버 권위형 하이브리드 대비 물리 서버 가동... 클라이언트를 기다립니다.");
         tcpListener.BeginAcceptTcpClient(OnAcceptClient, null);
@@ -43,7 +43,7 @@ public class ServerNetwork : MonoBehaviour
     private void ReceiveLoop(TcpClient client)
     {
         NetworkStream stream = client.GetStream();
-        byte[] headerBuffer = new byte[4];
+        byte[] headerBuffer = new byte[NetworkConfig.HeaderSize];
 
         stream.BeginRead(headerBuffer, 0, headerBuffer.Length, OnReadHeader, new object[] { stream, headerBuffer, client });
     }
