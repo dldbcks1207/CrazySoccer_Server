@@ -611,6 +611,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
   soccerBallTransform: {fileID: 2019494200}
+  playerPrefab: {fileID: 8172785195547490190, guid: 46d04f7ee6eb76648ba3759a18649789, type: 3}
 --- !u!1 &1177574483
 GameObject:
   m_ObjectHideFlags: 0

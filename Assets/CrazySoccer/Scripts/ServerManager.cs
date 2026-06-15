@@ -5,8 +5,6 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
-using NUnit.Framework;
-using UnityEditor.PackageManager;
 using UnityEngine;
 
 public class ServerManager : MonoBehaviour
@@ -14,9 +12,9 @@ public class ServerManager : MonoBehaviour
     static public ServerManager Instance;
 
     private TcpListener tcpListener;
-    private ConcurrentQueue<Action> mainThreadQueue = new ConcurrentQueue<Action>();
-    public Dictionary<ulong, PlayerSession> playerSessions { get; private set; } = new Dictionary<ulong, PlayerSession>();
-    public Dictionary<PacketType, Action<BinaryReader>> packetHandlers = new Dictionary<PacketType, Action<BinaryReader>>();
+    public ConcurrentQueue<Action> mainThreadQueue = new ConcurrentQueue<Action>();
+    public ConcurrentDictionary<ulong, PlayerSession> playerSessions { get; private set; } = new ConcurrentDictionary<ulong, PlayerSession>();
+    public Dictionary<PacketType, Action<PlayerSession, BinaryReader>> packetHandlers = new Dictionary<PacketType, Action<PlayerSession, BinaryReader>>();
 
     private void Awake()
     {
@@ -25,53 +23,69 @@ public class ServerManager : MonoBehaviour
 
     private void Start()
     {
+        packetHandlers.Add(PacketType.MoveInput, GameManager.Instance.MovePacketHandler);
+
         tcpListener = new TcpListener(IPAddress.Any, NetworkConfig.ServerPort);
         tcpListener.Start();
-        Debug.Log("서버 구동시작..");
+        Debug.Log("Server Started");
         tcpListener.BeginAcceptTcpClient(OnAcceptClient, null);
     }
 
     private void OnAcceptClient(IAsyncResult ar)
     {
-        ulong sessionID = GenerateSessionID();
-        TcpClient client = tcpListener.EndAcceptTcpClient(ar);
-        PlayerSession playerSession = new PlayerSession { Client = client, SessionID = sessionID };
-        playerSessions.Add(sessionID, playerSession);
-
-        mainThreadQueue.Enqueue(() =>
+        try
         {
-            Debug.Log($"SessionID : {sessionID} is Connected");
-        });
+            TcpClient client = tcpListener.EndAcceptTcpClient(ar);
+            ulong sessionID = GenerateSessionID();
 
-        ReceiveLoop(playerSession);
-        tcpListener.BeginAcceptTcpClient(OnAcceptClient, null);
+            PlayerSession playerSession = new PlayerSession
+            {
+                Client = client,
+                Stream = client.GetStream(),
+                SessionID = sessionID
+            };
+
+            playerSessions.TryAdd(sessionID, playerSession);
+
+            mainThreadQueue.Enqueue(() =>
+            {
+                GameManager.Instance.ConnectPlayer(playerSession);
+            });
+
+            ReceiveLoop(playerSession);
+            tcpListener.BeginAcceptTcpClient(OnAcceptClient, null);
+        }
+        catch (Exception ex) { Debug.LogError($"Error: {ex.Message}"); }
     }
 
     private void ReceiveLoop(PlayerSession playerSession)
     {
-        NetworkStream stream = playerSession.Client.GetStream();
-        byte[] headerBuffer = new byte[NetworkConfig.HeaderSize];
+        if (playerSession.Client == null || !playerSession.Client.Connected) return;
 
-        stream.BeginRead(headerBuffer, 0, headerBuffer.Length, OnReadHeader, new object[] { stream, headerBuffer, playerSession });
+        playerSession.Stream.BeginRead(
+            playerSession.HeaderBuffer, 0, playerSession.HeaderBuffer.Length,
+            OnReadHeader, playerSession
+        );
     }
 
     private void OnReadHeader(IAsyncResult ar)
     {
-        object[] state = (object[])ar.AsyncState;
-        NetworkStream stream = (NetworkStream)state[0];
-        byte[] headerBuffer = (byte[])state[1];
-        PlayerSession playerSession = (PlayerSession)state[2];
+        PlayerSession playerSession = (PlayerSession)ar.AsyncState;
 
         try
         {
-            int bytesRead = stream.EndRead(ar);
+            int bytesRead = playerSession.Stream.EndRead(ar);
             if (bytesRead == 0) { CloseClient(playerSession); return; }
 
-            short packetSize = BitConverter.ToInt16(headerBuffer, 0);
-            PacketType packetType = (PacketType)BitConverter.ToInt16(headerBuffer, 2);
+            short packetSize = BitConverter.ToInt16(playerSession.HeaderBuffer, 0);
+            PacketType packetType = (PacketType)BitConverter.ToInt16(playerSession.HeaderBuffer, 2);
 
-            byte[] bodyBuffer = new byte[packetSize - NetworkConfig.HeaderSize];
-            stream.BeginRead(bodyBuffer, 0, bodyBuffer.Length, OnReadBody, new object[] { stream, bodyBuffer, packetType, playerSession });
+            playerSession.BodyBuffer = new byte[packetSize - NetworkConfig.HeaderSize];
+
+            playerSession.Stream.BeginRead(
+                playerSession.BodyBuffer, 0, playerSession.BodyBuffer.Length,
+                OnReadBody, new object[] { packetType, playerSession }
+            );
         }
         catch { CloseClient(playerSession); }
     }
@@ -79,26 +93,20 @@ public class ServerManager : MonoBehaviour
     private void OnReadBody(IAsyncResult ar)
     {
         object[] state = (object[])ar.AsyncState;
-        NetworkStream stream = (NetworkStream)state[0];
-        byte[] bodyBuffer = (byte[])state[1];
-        PacketType packetType = (PacketType)state[2];
-        PlayerSession playerSession = (PlayerSession)state[3];
+        PacketType packetType = (PacketType)state[0];
+        PlayerSession playerSession = (PlayerSession)state[1];
 
         try
         {
-            int bytesRead = stream.EndRead(ar);
+            int bytesRead = playerSession.Stream.EndRead(ar);
             if (bytesRead == 0) { CloseClient(playerSession); return; }
 
-            using (MemoryStream ms = new MemoryStream(bodyBuffer))
+            using (MemoryStream ms = new MemoryStream(playerSession.BodyBuffer))
             using (BinaryReader br = new BinaryReader(ms))
             {
                 if (packetHandlers.TryGetValue(packetType, out var handler))
                 {
-                    handler.Invoke(br);
-                }
-                else
-                {
-                    Debug.LogError($"{packetType}은 등록되지 않음");
+                    handler.Invoke(playerSession, br);
                 }
             }
 
@@ -124,10 +132,9 @@ public class ServerManager : MonoBehaviour
 
     private void CloseClient(PlayerSession playerSession)
     {
-        ulong sessionID = playerSession.SessionID;
         playerSession.Client.Close();
-        playerSessions.Remove(sessionID);
-        Debug.Log($"{sessionID} is Disconnected");
+        playerSessions.TryRemove(playerSession.SessionID, out _);
+        Debug.Log($"Player{playerSession.PlayerID} Disconnectd.");
     }
 
     void OnApplicationQuit()

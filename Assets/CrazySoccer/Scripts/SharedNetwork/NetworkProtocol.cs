@@ -1,9 +1,12 @@
 public enum PacketType : short
 {
     None = 0,
-    MoveInput = 1,
-    SyncPosition = 2,
-    GoalEvent = 3
+    SendSession = 1,
+    NewSessionConnect = 2,
+    MoveInput = 3,
+    SyncPlayerPosition = 4,
+    SyncBallPosition = 5,
+    GoalEvent = 6
 }
 
 public static class NetworkConfig

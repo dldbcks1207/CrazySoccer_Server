@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
@@ -8,54 +10,72 @@ public class GameManager : MonoBehaviour
     public static GameManager Instance;
 
     [SerializeField] private Transform soccerBallTransform;
-    Dictionary<ushort, PlayerObject> playerObjects = new Dictionary<ushort, PlayerObject>();
+    [SerializeField] private PlayerObject playerPrefab;
+    ConcurrentDictionary<ushort, PlayerObject> playerObjects = new ConcurrentDictionary<ushort, PlayerObject>();
+    private ushort playerIDCursor = 1;
 
     private void Awake()
     {
         Instance = this;
     }
-    
-    private void Start()
-    {
-        ServerManager.Instance.packetHandlers.Add(PacketType.MoveInput, MovePacketHandler);
-    }
 
-    public void MovePacketHandler(BinaryReader br)
+    public void ConnectPlayer(PlayerSession playerSession)
     {
-        ushort playerID = br.ReadUInt16();
-        PlayerObject playerObject = playerObjects[playerID];
-        playerObject.currentHorizontalInput = br.ReadSingle();
-        if (br.ReadBoolean()) playerObject.currentJumpInput = true;
-    }
+        ushort playerID = playerIDCursor++;
+        playerSession.PlayerID = playerID;
 
-    public void SendGoalEvent(short scoredTeam)
-    {
-        GoalEventPacket goalPacket = new GoalEventPacket();
-        goalPacket.ScoredTeam = scoredTeam;
-        byte[] packet = goalPacket.Serialize();
+        PlayerObject playerObj = Instantiate(playerPrefab);
+        playerObjects.TryAdd(playerID, playerObj);
+        Debug.Log($"Player{playerSession.PlayerID}({playerSession.SessionID}) is Connected");
 
-        foreach (KeyValuePair<ulong, PlayerSession> session in ServerManager.Instance.playerSessions)
+        SendSessionPacket sessionPacket = new SendSessionPacket
         {
-            NetworkStream stream = session.Value.Client.GetStream();
-            stream.Write(packet, 0, packet.Length);
+            SessionID = playerSession.SessionID,
+            PlayerID = playerSession.PlayerID,
+            PlayerNum = (ushort)playerObjects.Count
+        };
+        byte[] packet = sessionPacket.Serialize();
+        playerSession.Stream.Write(packet, 0, packet.Length);
+
+        SendNewPlayerPacket(playerID);
+    }
+
+    public void SendNewPlayerPacket(ushort playerID)
+    {
+        NewSessionConnectPacket newSessionPacket = new NewSessionConnectPacket { PlayerID = playerID };
+        byte[] packet = newSessionPacket.Serialize();
+
+        foreach (var session in ServerManager.Instance.playerSessions.Values)
+        {
+            if (session.PlayerID == playerID) continue;
+            session.Stream.Write(packet, 0, packet.Length);
+        }
+    }
+
+    public void MovePacketHandler(PlayerSession session, BinaryReader br)
+    {
+        if (playerObjects.TryGetValue(session.PlayerID, out PlayerObject playerObject))
+        {
+            playerObject.currentHorizontalInput = br.ReadSingle();
+            if (br.ReadBoolean()) playerObject.currentJumpInput = true;
         }
     }
 
     void FixedUpdate()
     {
-        foreach (KeyValuePair<ushort, PlayerObject> item in playerObjects)
+        foreach (var item in playerObjects)
         {
-            SyncPacket sync = new SyncPacket();
-            sync.PlayerX = item.Value.transform.position.x;
-            sync.PlayerY = item.Value.transform.position.y;
-            sync.BallX = soccerBallTransform.position.x;
-            sync.BallY = soccerBallTransform.position.y;
+            PlayerSyncPacket sync = new PlayerSyncPacket
+            {
+                PlayerID = item.Key,
+                PlayerX = item.Value.transform.position.x,
+                PlayerY = item.Value.transform.position.y
+            };
             byte[] syncBytes = sync.Serialize();
 
-            foreach (KeyValuePair<ulong, PlayerSession> session in ServerManager.Instance.playerSessions)
+            foreach (var session in ServerManager.Instance.playerSessions.Values)
             {
-                NetworkStream stream = session.Value.Client.GetStream();
-                stream.Write(syncBytes, 0, syncBytes.Length);
+                session.Stream.Write(syncBytes, 0, syncBytes.Length);
             }
         }
     }
