@@ -76,15 +76,22 @@ public class ServerManager : MonoBehaviour
         {
             int bytesRead = playerSession.Stream.EndRead(ar);
             if (bytesRead == 0) { CloseClient(playerSession); return; }
+            int totalRead = bytesRead;
+            while (totalRead < NetworkConfig.HeaderSize)
+            {
+                int read = playerSession.Stream.Read(playerSession.HeaderBuffer, totalRead, NetworkConfig.HeaderSize - totalRead);
+                if (read == 0) { CloseClient(playerSession); return; }
+                totalRead += read;
+            }
 
             short packetSize = BitConverter.ToInt16(playerSession.HeaderBuffer, 0);
             PacketType packetType = (PacketType)BitConverter.ToInt16(playerSession.HeaderBuffer, 2);
 
             playerSession.BodyBuffer = new byte[packetSize - NetworkConfig.HeaderSize];
-
+            
             playerSession.Stream.BeginRead(
-                playerSession.BodyBuffer, 0, playerSession.BodyBuffer.Length,
-                OnReadBody, new object[] { packetType, playerSession }
+                playerSession.BodyBuffer, 0, playerSession.BodyBuffer.Length, 
+                OnReadBody, new object[] { packetType, playerSession } 
             );
         }
         catch { CloseClient(playerSession); }
@@ -101,12 +108,24 @@ public class ServerManager : MonoBehaviour
             int bytesRead = playerSession.Stream.EndRead(ar);
             if (bytesRead == 0) { CloseClient(playerSession); return; }
 
+            int totalRead = bytesRead;
+            while (totalRead < playerSession.BodyBuffer.Length)
+            {
+                int read = playerSession.Stream.Read(playerSession.BodyBuffer, totalRead, playerSession.BodyBuffer.Length - totalRead);
+                if (read == 0) { CloseClient(playerSession); return; }
+                totalRead += read;
+            }
+
             using (MemoryStream ms = new MemoryStream(playerSession.BodyBuffer))
             using (BinaryReader br = new BinaryReader(ms))
             {
                 if (packetHandlers.TryGetValue(packetType, out var handler))
                 {
                     handler.Invoke(playerSession, br);
+                }
+                else
+                {
+                    Debug.LogError($"[서버] {packetType}은 등록되지 않은 패킷입니다.");
                 }
             }
 
