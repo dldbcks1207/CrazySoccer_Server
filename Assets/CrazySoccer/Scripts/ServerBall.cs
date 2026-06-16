@@ -4,7 +4,9 @@ public class ServerBall : MonoBehaviour
 {
     private Rigidbody2D rb;
 
-    [SerializeField] private float dribbleForce = 12f; 
+    [SerializeField] private float dribbleForce = 12f;
+    [Header("축구공 물리 세팅")]
+    [SerializeField] private float maxSpeed = 50f;
 
     void Start()
     {
@@ -23,6 +25,16 @@ public class ServerBall : MonoBehaviour
             rb.linearVelocity = Vector2.zero;
 
             rb.AddForce(dribbleDirection * dribbleForce, ForceMode2D.Impulse);
+        }
+    }
+
+    void FixedUpdate()
+    {
+        if (rb == null) return;
+
+        if (rb.linearVelocity.magnitude > maxSpeed)
+        {
+            rb.linearVelocity = rb.linearVelocity.normalized * maxSpeed;
         }
     }
 }

@@ -129,7 +129,7 @@ GameObject:
   m_Component:
   - component: {fileID: 16252928}
   - component: {fileID: 16252929}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Ground
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -239,7 +239,7 @@ BoxCollider2D:
   m_Enabled: 1
   serializedVersion: 3
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: 031abfd5c9b0f1749934e511c63f40bd, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -317,7 +317,7 @@ BoxCollider2D:
   m_Enabled: 1
   serializedVersion: 3
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: 031abfd5c9b0f1749934e511c63f40bd, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -395,7 +395,7 @@ PolygonCollider2D:
   m_Enabled: 1
   serializedVersion: 3
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: 031abfd5c9b0f1749934e511c63f40bd, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -483,7 +483,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ff6b085f81a983d45b7c29e17a900991, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GoalPostScript
-  scoredTeam: 1
+  goalTeamID: 0
 --- !u!61 &881818883
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -701,7 +701,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ff6b085f81a983d45b7c29e17a900991, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GoalPostScript
-  scoredTeam: 2
+  goalTeamID: 0
 --- !u!61 &1433162016
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -790,7 +790,7 @@ PolygonCollider2D:
   m_Enabled: 1
   serializedVersion: 3
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: 031abfd5c9b0f1749934e511c63f40bd, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -875,7 +875,7 @@ BoxCollider2D:
   m_Enabled: 1
   serializedVersion: 3
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: 031abfd5c9b0f1749934e511c63f40bd, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -1006,7 +1006,7 @@ Rigidbody2D:
     m_Bits: 0
   m_Interpolate: 0
   m_SleepingMode: 1
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
   m_Constraints: 0
 --- !u!114 &2019494202
 MonoBehaviour:

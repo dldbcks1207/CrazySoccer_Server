@@ -47,6 +47,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerScript
   moveSpeed: 5
+  jumpForce: 540
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 64
+  jumpBufferTime: 0.1
   currentHorizontalInput: 0
   currentJumpInput: 0
   playerRigidbody: {fileID: 7351701512593736709}
@@ -62,11 +67,11 @@ Rigidbody2D:
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
-  m_Mass: 1
+  m_Mass: 60
   m_LinearDamping: 0
   m_AngularDamping: 0.05
-  m_GravityScale: 1
-  m_Material: {fileID: 0}
+  m_GravityScale: 2
+  m_Material: {fileID: 6200000, guid: 031abfd5c9b0f1749934e511c63f40bd, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -75,7 +80,7 @@ Rigidbody2D:
     m_Bits: 0
   m_Interpolate: 0
   m_SleepingMode: 1
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
   m_Constraints: 4
 --- !u!61 &944302315372986969
 BoxCollider2D:
@@ -122,4 +127,4 @@ BoxCollider2D:
     adaptiveTiling: 0
   m_AutoTiling: 0
   m_Size: {x: 0.5, y: 0.6732505}
-  m_EdgeRadius: 0
+  m_EdgeRadius: 0.04
