@@ -99,30 +99,26 @@ public class GameManager : MonoBehaviour
 
     void FixedUpdate()
     {
+        WorldSyncPacket syncPacket = new WorldSyncPacket();
+
+        syncPacket.BallX = soccerBallTransform.position.x;
+        syncPacket.BallY = soccerBallTransform.position.y;
+
         foreach (var item in playerObjects)
         {
-            PlayerSyncPacket sync = new PlayerSyncPacket
+            syncPacket.PlayerList.Add(new WorldSyncPacket.PlayerData
             {
                 PlayerID = item.Key,
                 PlayerX = item.Value.transform.position.x,
                 PlayerY = item.Value.transform.position.y
-            };
-            byte[] syncBytes = sync.Serialize();
-
-            foreach (var session in ServerManager.Instance.playerSessions.Values)
-            {
-                session.Stream.Write(syncBytes, 0, syncBytes.Length);
-            }
+            });
         }
 
-        BallSyncPacket ballSync = new BallSyncPacket();
-        ballSync.BallX = soccerBallTransform.position.x;
-        ballSync.BallY = soccerBallTransform.position.y;
-        byte[] ballBytes = ballSync.Serialize();
+        byte[] syncBytes = syncPacket.Serialize();
 
         foreach (var session in ServerManager.Instance.playerSessions.Values)
         {
-            session.Stream.Write(ballBytes, 0, ballBytes.Length);
+            session.Stream.Write(syncBytes, 0, syncBytes.Length);
         }
     }
 }

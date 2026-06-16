@@ -4,8 +4,7 @@ public enum PacketType : short
     SendSession = 1,
     NewSessionConnect = 2,
     MoveInput = 3,
-    SyncPlayerPosition = 4,
-    SyncBallPosition = 5,
+    SyncWorld = 4,
     GoalEvent = 6
 }
 
