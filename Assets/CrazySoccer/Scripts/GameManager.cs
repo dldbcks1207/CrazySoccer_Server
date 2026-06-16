@@ -97,6 +97,17 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    public void KickPacketHandler(PlayerSession session, BinaryReader br)
+    {
+        ServerManager.Instance.mainThreadQueue.Enqueue(() =>
+        {
+            if (playerObjects.TryGetValue(session.PlayerID, out PlayerObject playerObject))
+            {
+                playerObject.TryKick();
+            }
+        });
+    }
+
     void FixedUpdate()
     {
         WorldSyncPacket syncPacket = new WorldSyncPacket();

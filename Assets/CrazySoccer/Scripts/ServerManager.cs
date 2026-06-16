@@ -24,7 +24,7 @@ public class ServerManager : MonoBehaviour
     private void Start()
     {
         packetHandlers.Add(PacketType.MoveInput, GameManager.Instance.MovePacketHandler);
-
+        packetHandlers.Add(PacketType.KickInput, GameManager.Instance.KickPacketHandler);
         tcpListener = new TcpListener(IPAddress.Any, NetworkConfig.ServerPort);
         tcpListener.Start();
         Debug.Log("Server Started");
@@ -87,12 +87,33 @@ public class ServerManager : MonoBehaviour
             short packetSize = BitConverter.ToInt16(playerSession.HeaderBuffer, 0);
             PacketType packetType = (PacketType)BitConverter.ToInt16(playerSession.HeaderBuffer, 2);
 
-            playerSession.BodyBuffer = new byte[packetSize - NetworkConfig.HeaderSize];
-            
-            playerSession.Stream.BeginRead(
-                playerSession.BodyBuffer, 0, playerSession.BodyBuffer.Length, 
-                OnReadBody, new object[] { packetType, playerSession } 
-            );
+            int bodyLength = packetSize - NetworkConfig.HeaderSize;
+
+            if (bodyLength > 0)
+            {
+                playerSession.BodyBuffer = new byte[packetSize - NetworkConfig.HeaderSize];
+                playerSession.Stream.BeginRead(
+                    playerSession.BodyBuffer, 0, playerSession.BodyBuffer.Length,
+                    OnReadBody, new object[] { packetType, playerSession }
+                );
+            }
+            else
+            {
+                playerSession.BodyBuffer = new byte[0];
+                using (MemoryStream ms = new MemoryStream(playerSession.BodyBuffer))
+                using (BinaryReader br = new BinaryReader(ms))
+                {
+                    if (packetHandlers.TryGetValue(packetType, out var handler))
+                    {
+                        handler.Invoke(playerSession, br);
+                    }
+                    else
+                    {
+                        Debug.LogError($"[서버] {packetType}은 등록되지 않은 패킷입니다.");
+                    }
+                }
+                ReceiveLoop(playerSession);
+            }
         }
         catch { CloseClient(playerSession); }
     }

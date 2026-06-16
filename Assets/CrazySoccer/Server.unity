@@ -923,7 +923,7 @@ GameObject:
   - component: {fileID: 2019494202}
   - component: {fileID: 2019494199}
   - component: {fileID: 2019494201}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: SoccerBall
   m_TagString: SoccerBall
   m_Icon: {fileID: 0}
@@ -1020,7 +1020,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eebb48c8cd8b8be4c95d3eaff1f7facc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ServerBall
-  dribbleForce: 4
+  maxSpeed: 50
 --- !u!1 &2087038163
 GameObject:
   m_ObjectHideFlags: 0

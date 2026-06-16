@@ -5,6 +5,7 @@ public enum PacketType : short
     NewSessionConnect = 2,
     MoveInput = 3,
     SyncWorld = 4,
+    KickInput = 5,
     GoalEvent = 6
 }
 
