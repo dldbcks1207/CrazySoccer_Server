@@ -24,10 +24,11 @@ public class MovePacket
 
 public class KickPacket
 {
-    public short Size = 6;
+    public short Size = 7;
     public PacketType Type = PacketType.KickInput;
     public byte Force;
     public bool IsDriven;
+    public bool IsDirectionLeft;
 
     public byte[] Serialize()
     {
@@ -38,8 +39,8 @@ public class KickPacket
             bw.Write((short)Type); // 2Byte
             bw.Write(Force); // 1Byte
             bw.Write(IsDriven); // 1Byte
-
-            return ms.ToArray(); // 6Byte
+            bw.Write(IsDirectionLeft); // 1Byte
+            return ms.ToArray(); // 7Byte
         }
     }
 

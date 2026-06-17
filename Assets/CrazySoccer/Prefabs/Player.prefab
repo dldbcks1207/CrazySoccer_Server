@@ -111,7 +111,7 @@ GameObject:
   - component: {fileID: 8172785195547490190}
   - component: {fileID: 7351701512593736709}
   - component: {fileID: 944302315372986969}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Player
   m_TagString: Player
   m_Icon: {fileID: 0}
@@ -152,6 +152,9 @@ MonoBehaviour:
   ballLayer:
     serializedVersion: 2
     m_Bits: 128
+  playerLayer:
+    serializedVersion: 2
+    m_Bits: 256
   kickPoint: {fileID: 8790231737050611309}
   kickRadius: 0.5
   dribbleForce: 3

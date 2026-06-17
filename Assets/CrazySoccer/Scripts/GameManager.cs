@@ -101,11 +101,13 @@ public class GameManager : MonoBehaviour
     {
         byte force = br.ReadByte();
         bool isDriven = br.ReadBoolean();
+        bool directionIsLeft = br.ReadBoolean();
+
         ServerManager.Instance.mainThreadQueue.Enqueue(() =>
         {
             if (playerObjects.TryGetValue(session.PlayerID, out PlayerObject playerObject))
             {
-                playerObject.TryKick(force, isDriven);
+                playerObject.TryKick(force, isDriven, directionIsLeft);
             }
         });
     }
