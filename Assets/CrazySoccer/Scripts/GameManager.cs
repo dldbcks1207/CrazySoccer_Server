@@ -99,11 +99,13 @@ public class GameManager : MonoBehaviour
 
     public void KickPacketHandler(PlayerSession session, BinaryReader br)
     {
+        byte force = br.ReadByte();
+        bool isDriven = br.ReadBoolean();
         ServerManager.Instance.mainThreadQueue.Enqueue(() =>
         {
             if (playerObjects.TryGetValue(session.PlayerID, out PlayerObject playerObject))
             {
-                playerObject.TryKick();
+                playerObject.TryKick(force, isDriven);
             }
         });
     }

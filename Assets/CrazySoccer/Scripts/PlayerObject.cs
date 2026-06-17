@@ -65,9 +65,8 @@ public class PlayerObject : MonoBehaviour
         }
     }
 
-    public void TryKick()
+    public void TryKick(byte force, bool isDriven)
     {
-        Debug.Log("Kick");
         Vector2 origin = (Vector2)kickPoint.position;
         RaycastHit2D hit = Physics2D.CircleCast(origin, kickRadius, Vector2.zero, 0f, ballLayer);
 
@@ -77,8 +76,11 @@ public class PlayerObject : MonoBehaviour
             if (ball != null)
             {
                 Vector2 kickDir = (hit.collider.transform.position - transform.position).normalized;
-                kickDir.y += kickY;
-                ball.ReceiveForce(kickDir.normalized, kickForce);
+                if (isDriven)
+                    kickDir.y = 0;
+                else
+                    kickDir.y += kickY;
+                ball.ReceiveForce(kickDir.normalized, force / 100f * kickForce);
             }
         }
     }

@@ -24,9 +24,11 @@ public class MovePacket
 
 public class KickPacket
 {
-    public short Size = 4;
+    public short Size = 6;
     public PacketType Type = PacketType.KickInput;
-    
+    public byte Force;
+    public bool IsDriven;
+
     public byte[] Serialize()
     {
         using (MemoryStream ms = new MemoryStream())
@@ -34,8 +36,10 @@ public class KickPacket
         {
             bw.Write(Size); // 2Byte
             bw.Write((short)Type); // 2Byte
-            
-            return ms.ToArray();
+            bw.Write(Force); // 1Byte
+            bw.Write(IsDriven); // 1Byte
+
+            return ms.ToArray(); // 6Byte
         }
     }
 
