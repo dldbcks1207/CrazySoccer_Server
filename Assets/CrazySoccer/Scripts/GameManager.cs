@@ -369,7 +369,9 @@ public class GameManager : MonoBehaviour
         syncPacket.BallX = soccerBallTransform.position.x;
         syncPacket.BallY = soccerBallTransform.position.y;
 
-        // ★ 추가: 서버의 현재 시간을 패킷에 탑재!
+        // =========================================================
+        // ★ 범인 검거! 이 한 줄이 빠져서 클라이언트에게 0초가 전송되고 있었습니다!
+        // =========================================================
         syncPacket.MatchTimer = matchTimer;
 
         foreach (var item in playerObjects)
