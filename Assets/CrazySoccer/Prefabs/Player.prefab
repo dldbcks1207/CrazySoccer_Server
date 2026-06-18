@@ -156,7 +156,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 256
   kickPoint: {fileID: 8790231737050611309}
-  kickRadius: 0.5
+  kickRadius: 0.7
   dribbleForce: 3
   kickForce: 12
   kickY: 0.9
@@ -164,6 +164,8 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 64
   jumpBufferTime: 0.1
+  normalGrip: 15
+  knockbackGrip: 5
   currentHorizontalInput: 0
   currentJumpInput: 0
   playerRigidbody: {fileID: 7351701512593736709}

@@ -71,7 +71,7 @@ public class ServerEOSManager : MonoBehaviour
 
     private void CreateGameSession()
     {
-        string serverIP = "192.168.0.109";
+        string serverIP = "112.171.83.46";
         string serverPort = "7777";
 
         // 빌드된 .exe 실행 시 배정받은 IP/Port 파싱 (-ip 1.2.3.4 -port 7777 형태)
