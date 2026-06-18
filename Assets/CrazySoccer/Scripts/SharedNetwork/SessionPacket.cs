@@ -79,3 +79,20 @@ public class GameStartPacket
         }
     }
 }
+
+public class GameEndPacket
+{
+    public short Size = 4; // 2Byte
+    public PacketType Type = PacketType.GameEnd; // 2Byte
+
+    public byte[] Serialize()
+    {
+        using (MemoryStream ms = new MemoryStream())
+        using (BinaryWriter bw = new BinaryWriter(ms))
+        {
+            bw.Write(Size); // 2Byte
+            bw.Write((short)Type); // 2Byte
+            return ms.ToArray(); // 4Byte
+        }
+    }
+}

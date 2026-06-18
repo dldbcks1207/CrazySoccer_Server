@@ -28,7 +28,6 @@ public class GameManager : MonoBehaviour
     // ★ 추가: 매 프레임마다 시간을 체크하는 Update 함수
     private void Update()
     {
-        // 게임이 진행 중이고, 일시정지 상태가 아닐 때만 시간이 흘러갑니다.
         if (isMatchRunning && !isGamePaused)
         {
             matchTimer -= Time.deltaTime;
@@ -36,17 +35,64 @@ public class GameManager : MonoBehaviour
             if (matchTimer <= 0f)
             {
                 matchTimer = 0f;
-                isMatchRunning = false; // 타이머 완전 종료
+                isMatchRunning = false;
 
-                // ★ 경기 종료! (모든 선수와 공을 그 자리에 얼려버립니다)
-                SetGamePause(true);
-                Debug.Log("=================================");
-                Debug.Log("            게임종료             ");
-                Debug.Log("=================================");
-
-                // 나중에 여기에 '클라이언트들에게 게임 종료 화면 띄우라는 패킷'을 쏘시면 됩니다!
+                // ★ 기존의 SetGamePause(true); 를 지우고 새로운 엔딩 시퀀스 호출!
+                EndGameSequence();
             }
         }
+    }
+
+    private async void EndGameSequence()
+    {
+        Debug.Log("=================================");
+        Debug.Log("            게임종료             ");
+        Debug.Log("=================================");
+
+        // 1. 골대 이벤트처럼 공만 허공에 꽁꽁 얼려버립니다. (유저들은 자유롭게 이동 가능)
+        Rigidbody2D ballRb = soccerBallTransform.GetComponent<Rigidbody2D>();
+        if (ballRb != null)
+        {
+            ballRb.linearVelocity = Vector2.zero;
+            ballRb.angularVelocity = 0f;
+            ballRb.simulated = false;
+        }
+
+        // 2. 5초간 대기 (마지막 세리머니 타임!)
+        await Task.Delay(5000);
+
+        // 3. 클라이언트들에게 "집에 가라!" (타이틀로 이동) 패킷 발송
+        GameEndPacket gameEndPacket = new GameEndPacket();
+        byte[] packet = gameEndPacket.Serialize();
+
+        foreach (var session in ServerManager.Instance.playerSessions.Values)
+        {
+            session.Stream.Write(packet, 0, packet.Length);
+        }
+
+        // 4. 패킷이 무사히 날아갈 시간을 1초 줍니다.
+        await Task.Delay(1000);
+
+        // 5. 서버 방 청소 (새로운 매칭을 받을 준비)
+        ServerManager.Instance.mainThreadQueue.Enqueue(() =>
+        {
+            // 플레이어 오브젝트 다 파괴하고 딕셔너리 비우기
+            foreach (var item in playerObjects.Values)
+            {
+                Destroy(item.gameObject);
+            }
+            playerObjects.Clear();
+            playerIDCursor = 1; // ID 발급기 초기화
+
+            // 공 원래대로 녹여놓기
+            if (ballRb != null)
+            {
+                ballRb.simulated = true;
+                soccerBallTransform.position = Vector2.zero;
+            }
+
+            Debug.Log("[서버] 방 청소 완료! 새로운 매칭을 기다립니다.");
+        });
     }
 
     public void SetGamePause(bool pause)

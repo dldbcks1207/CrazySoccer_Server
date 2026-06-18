@@ -8,7 +8,8 @@ public enum PacketType : short
     KickInput = 5,
     GoalEvent = 6,
     GameWait = 7,
-    GameStart = 8
+    GameStart = 8,
+    GameEnd = 9
 }
 
 public static class NetworkConfig
