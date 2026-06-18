@@ -76,20 +76,25 @@ public class GameManager : MonoBehaviour
         // 5. 서버 방 청소 (새로운 매칭을 받을 준비)
         ServerManager.Instance.mainThreadQueue.Enqueue(() =>
         {
-            // 플레이어 오브젝트 다 파괴하고 딕셔너리 비우기
             foreach (var item in playerObjects.Values)
             {
                 Destroy(item.gameObject);
             }
             playerObjects.Clear();
-            playerIDCursor = 1; // ID 발급기 초기화
+            playerIDCursor = 1;
 
-            // 공 원래대로 녹여놓기
             if (ballRb != null)
             {
                 ballRb.simulated = true;
                 soccerBallTransform.position = Vector2.zero;
             }
+
+            // ========================================================
+            // ★ 추가: 다음 판 손님들을 위해 타이머를 미리 180초로 감아둡니다!
+            // ========================================================
+            matchTimer = 180f;
+            isMatchRunning = false;
+            isGamePaused = false;
 
             Debug.Log("[서버] 방 청소 완료! 새로운 매칭을 기다립니다.");
         });
