@@ -145,8 +145,6 @@ public class GameManager : MonoBehaviour
 
         if (playerIDCursor == 3)
         {
-            SetGamePause(true);
-
             RunStartSequence();
         }
     }
@@ -161,6 +159,7 @@ public class GameManager : MonoBehaviour
         ServerManager.Instance.mainThreadQueue.Enqueue(() =>
         {
             // 1. 경기장 위치 리셋
+            SetGamePause(true);
             foreach (KeyValuePair<ushort, PlayerObject> item in playerObjects)
             {
                 Rigidbody2D pRb = item.Value.GetComponent<Rigidbody2D>();
@@ -184,7 +183,7 @@ public class GameManager : MonoBehaviour
             });
         });
     }
-    
+
     public async void SendGameWait(Action afterEvent = null)
     {
         GameWaitPacket gameWaitPacket = new GameWaitPacket();
