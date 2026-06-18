@@ -14,27 +14,51 @@ public class GameManager : MonoBehaviour
     ConcurrentDictionary<ushort, PlayerObject> playerObjects = new ConcurrentDictionary<ushort, PlayerObject>();
     private ushort playerIDCursor = 1;
 
-    // ★ 추가: 게임 멈춤 상태를 관리하는 플래그
     public bool isGamePaused { get; private set; } = false;
+
+    // ★ 추가: 게임 진행 시간 관련 변수 (3분 = 180초)
+    public float matchTimer = 180f;
+    public bool isMatchRunning = false;
 
     private void Awake()
     {
         Instance = this;
     }
 
-    // ★ 추가: 딸깍! 한 번으로 게임을 멈췄다 풀었다 하는 마법의 함수
+    // ★ 추가: 매 프레임마다 시간을 체크하는 Update 함수
+    private void Update()
+    {
+        // 게임이 진행 중이고, 일시정지 상태가 아닐 때만 시간이 흘러갑니다.
+        if (isMatchRunning && !isGamePaused)
+        {
+            matchTimer -= Time.deltaTime;
+
+            if (matchTimer <= 0f)
+            {
+                matchTimer = 0f;
+                isMatchRunning = false; // 타이머 완전 종료
+                
+                // ★ 경기 종료! (모든 선수와 공을 그 자리에 얼려버립니다)
+                SetGamePause(true);
+                Debug.Log("=================================");
+                Debug.Log("            게임종료             ");
+                Debug.Log("=================================");
+                
+                // 나중에 여기에 '클라이언트들에게 게임 종료 화면 띄우라는 패킷'을 쏘시면 됩니다!
+            }
+        }
+    }
+
     public void SetGamePause(bool pause)
     {
         isGamePaused = pause;
 
-        // 1. 공 얼리기 / 녹이기
         Rigidbody2D ballRb = soccerBallTransform.GetComponent<Rigidbody2D>();
         if (ballRb != null)
         {
-            ballRb.simulated = !pause; // false가 되면 물리 연산 정지, 공중 부양!
+            ballRb.simulated = !pause; 
         }
 
-        // 2. 모든 플레이어 얼리기 / 녹이기
         foreach (var item in playerObjects.Values)
         {
             Rigidbody2D pRb = item.GetComponent<Rigidbody2D>();
@@ -43,7 +67,6 @@ public class GameManager : MonoBehaviour
                 pRb.simulated = !pause;
             }
 
-            // 정지 상태일 때 혹시 모를 미끄러짐을 방지하기 위해 입력값 강제 초기화
             if (pause)
             {
                 item.currentHorizontalInput = 0f;
@@ -74,19 +97,14 @@ public class GameManager : MonoBehaviour
 
         SendNewPlayerPacket(playerID);
 
-        // ★ 2명이 모두 모였을 때의 완벽한 5단계 흐름 ★
         if (playerIDCursor == 3)
         {
-            // 1단계: 플레이어 조작 즉시 잠금 (ConnectPlayer는 이미 메인 스레드이므로 바로 호출 가능)
             SetGamePause(true);
 
-            // 2단계: 클라이언트들에게 "화면 가려라!" 패킷 발송
             SendGameWait(() =>
             {
-                // 3단계: 0.5초 뒤 (백그라운드 스레드에서 넘어옴) -> 메인 스레드 큐로 전달
                 ServerManager.Instance.mainThreadQueue.Enqueue(() =>
                 {
-                    // 메인 스레드에서 안전하게 위치 리셋
                     foreach (KeyValuePair<ushort, PlayerObject> item in playerObjects)
                     {
                         Rigidbody2D pRb = item.Value.GetComponent<Rigidbody2D>();
@@ -97,14 +115,17 @@ public class GameManager : MonoBehaviour
                         }
                     }
 
-                    // 4단계: 위치 세팅 끝! 클라이언트들에게 "화면 다시 밝혀라!" 패킷 발송
                     SendGameStart(() =>
                     {
-                        // 5단계: 화면 밝아지는 중(0.5초 뒤) -> 조작 잠금 해제!
                         ServerManager.Instance.mainThreadQueue.Enqueue(() =>
                         {
                             SetGamePause(false);
-                            Debug.Log("게임 시작! 조작 잠금 해제됨.");
+                            
+                            // ★ 추가: 드디어 진짜 게임 시작! 타이머가 굴러가도록 스위치를 켭니다.
+                            matchTimer = 180f; 
+                            isMatchRunning = true; 
+                            
+                            Debug.Log("게임 시작! 조작 잠금 해제 및 타이머 시작됨.");
                         });
                     });
                 });
@@ -112,7 +133,6 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    // (SendGameWait 함수는 기존과 동일하게 유지)
     public async void SendGameWait(Action afterEvent = null)
     {
         GameWaitPacket gameWaitPacket = new GameWaitPacket();
@@ -130,10 +150,8 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    // ★ 수정된 부분: 복붙 에러 고침 (GameWait -> GameStart)
     public async void SendGameStart(Action afterEvent = null)
     {
-        // 주의: NetworkProtocol.cs 에 GameStartPacket 이 정의되어 있다고 가정합니다!
         GameStartPacket gameStartPacket = new GameStartPacket();
         byte[] pakcet = gameStartPacket.Serialize();
 
@@ -197,7 +215,6 @@ public class GameManager : MonoBehaviour
 
     public void MovePacketHandler(PlayerSession session, BinaryReader br)
     {
-        // ★ 추가: 게임이 정지 상태라면 인풋 패킷을 뜯어보지도 않고 무시합니다.
         if (isGamePaused) return;
 
         if (playerObjects.TryGetValue(session.PlayerID, out PlayerObject playerObject))
@@ -209,7 +226,6 @@ public class GameManager : MonoBehaviour
 
     public void KickPacketHandler(PlayerSession session, BinaryReader br)
     {
-        // ★ 추가: 게임이 정지 상태라면 킥 인풋도 무시합니다.
         if (isGamePaused) return;
 
         byte force = br.ReadByte();
