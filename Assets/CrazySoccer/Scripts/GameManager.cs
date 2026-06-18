@@ -111,7 +111,7 @@ public class GameManager : MonoBehaviour
 
         if (afterEvent != null)
         {
-            await Task.Delay(500);
+            await Task.Delay(1000);
             afterEvent.Invoke();
         }
     }
@@ -128,7 +128,7 @@ public class GameManager : MonoBehaviour
 
         if (afterEvent != null)
         {
-            await Task.Delay(500);
+            await Task.Delay(1000);
             afterEvent.Invoke();
         }
     }
