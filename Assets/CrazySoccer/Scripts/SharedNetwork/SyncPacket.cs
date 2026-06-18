@@ -3,9 +3,13 @@ using System.IO;
 
 public class WorldSyncPacket
 {
+    // ★ 14바이트 -> 18바이트로 증가 (타이머 4바이트 추가)
     public short Size;
     public PacketType Type = PacketType.SyncWorld;
     public float BallX; public float BallY;
+    
+    // ★ 추가: 서버의 현재 진행 시간
+    public float MatchTimer; 
 
     public struct PlayerData
     {
@@ -16,7 +20,8 @@ public class WorldSyncPacket
 
     public byte[] Serialize()
     {
-        Size = (short)(14 + (PlayerList.Count * 10));
+        // ★ 14에서 18로 변경!
+        Size = (short)(18 + (PlayerList.Count * 10));
 
         using (MemoryStream ms = new MemoryStream())
         using (BinaryWriter bw = new BinaryWriter(ms))
@@ -25,6 +30,8 @@ public class WorldSyncPacket
             bw.Write((short)Type); // 2Byte
             bw.Write(BallX); // 4Byte
             bw.Write(BallY); // 4Byte
+            
+            bw.Write(MatchTimer); // ★ 4Byte 추가!
 
             bw.Write((ushort)PlayerList.Count); // 2Byte
             foreach(PlayerData p in PlayerList)
@@ -34,7 +41,7 @@ public class WorldSyncPacket
                 bw.Write(p.PlayerY); // 4Byte
             }
 
-            return ms.ToArray(); // 14 + (PlayerList.Count * 10) Byte
+            return ms.ToArray(); // 18 + (PlayerList.Count * 10) Byte
         }
     }
 }

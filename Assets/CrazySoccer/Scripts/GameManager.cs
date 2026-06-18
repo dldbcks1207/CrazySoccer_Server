@@ -277,6 +277,9 @@ public class GameManager : MonoBehaviour
         syncPacket.BallX = soccerBallTransform.position.x;
         syncPacket.BallY = soccerBallTransform.position.y;
 
+        // ★ 추가: 서버의 현재 시간을 패킷에 탑재!
+        syncPacket.MatchTimer = matchTimer;
+
         foreach (var item in playerObjects)
         {
             syncPacket.PlayerList.Add(new WorldSyncPacket.PlayerData
