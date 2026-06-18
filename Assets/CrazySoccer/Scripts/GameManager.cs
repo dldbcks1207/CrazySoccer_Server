@@ -329,7 +329,7 @@ public class GameManager : MonoBehaviour
             s.Stream.Write(packetBytes, 0, packetBytes.Length);
         }
     }
-    
+
     public void KickPacketHandler(PlayerSession session, BinaryReader br)
     {
         if (isGamePaused) return;
@@ -345,6 +345,21 @@ public class GameManager : MonoBehaviour
                 playerObject.TryKick(force, isDriven, directionIsLeft);
             }
         });
+
+        // ★ 추가: 킥을 한 본인을 제외한 '나머지 클라이언트'들에게 킥 애니메이션을 틀라고 방송합니다.
+        ReturnAnimationPacket returnPacket = new ReturnAnimationPacket();
+        returnPacket.playerID = session.PlayerID;
+        returnPacket.animNum = 0; // 0번 = 킥 애니메이션
+
+        byte[] packetBytes = returnPacket.Serialize();
+
+        foreach (var s in ServerManager.Instance.playerSessions.Values)
+        {
+            // 킥을 쏜 본인은 아까 클라이언트 쪽에서 즉시 애니메이션을 틀었으므로 방송에서 제외!
+            if (s.PlayerID == session.PlayerID) continue;
+
+            s.Stream.Write(packetBytes, 0, packetBytes.Length);
+        }
     }
 
     void FixedUpdate()
