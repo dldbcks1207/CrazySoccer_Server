@@ -73,13 +73,20 @@ public class GameManager : MonoBehaviour
         playerSession.Stream.Write(packet, 0, packet.Length);
 
         SendNewPlayerPacket(playerID);
+
+        // ★ 2명이 모두 모였을 때의 완벽한 5단계 흐름 ★
         if (playerIDCursor == 3)
         {
+            // 1단계: 플레이어 조작 즉시 잠금 (ConnectPlayer는 이미 메인 스레드이므로 바로 호출 가능)
+            SetGamePause(true);
+
+            // 2단계: 클라이언트들에게 "화면 가려라!" 패킷 발송
             SendGameWait(() =>
             {
+                // 3단계: 0.5초 뒤 (백그라운드 스레드에서 넘어옴) -> 메인 스레드 큐로 전달
                 ServerManager.Instance.mainThreadQueue.Enqueue(() =>
                 {
-
+                    // 메인 스레드에서 안전하게 위치 리셋
                     foreach (KeyValuePair<ushort, PlayerObject> item in playerObjects)
                     {
                         Rigidbody2D pRb = item.Value.GetComponent<Rigidbody2D>();
@@ -89,16 +96,23 @@ public class GameManager : MonoBehaviour
                             item.Value.transform.position = (item.Key == 1) ? new Vector2(-18f, 0f) : new Vector2(18f, 0f);
                         }
                     }
+
+                    // 4단계: 위치 세팅 끝! 클라이언트들에게 "화면 다시 밝혀라!" 패킷 발송
                     SendGameStart(() =>
                     {
-                        SetGamePause(false);
+                        // 5단계: 화면 밝아지는 중(0.5초 뒤) -> 조작 잠금 해제!
+                        ServerManager.Instance.mainThreadQueue.Enqueue(() =>
+                        {
+                            SetGamePause(false);
+                            Debug.Log("게임 시작! 조작 잠금 해제됨.");
+                        });
                     });
                 });
-                SetGamePause(true);
             });
         }
     }
 
+    // (SendGameWait 함수는 기존과 동일하게 유지)
     public async void SendGameWait(Action afterEvent = null)
     {
         GameWaitPacket gameWaitPacket = new GameWaitPacket();
@@ -111,15 +125,17 @@ public class GameManager : MonoBehaviour
 
         if (afterEvent != null)
         {
-            await Task.Delay(1000);
+            await Task.Delay(500);
             afterEvent.Invoke();
         }
     }
 
+    // ★ 수정된 부분: 복붙 에러 고침 (GameWait -> GameStart)
     public async void SendGameStart(Action afterEvent = null)
     {
-        GameWaitPacket gameWaitPacket = new GameWaitPacket();
-        byte[] pakcet = gameWaitPacket.Serialize();
+        // 주의: NetworkProtocol.cs 에 GameStartPacket 이 정의되어 있다고 가정합니다!
+        GameStartPacket gameStartPacket = new GameStartPacket();
+        byte[] pakcet = gameStartPacket.Serialize();
 
         foreach (var session in ServerManager.Instance.playerSessions.Values)
         {
@@ -128,7 +144,7 @@ public class GameManager : MonoBehaviour
 
         if (afterEvent != null)
         {
-            await Task.Delay(1000);
+            await Task.Delay(500);
             afterEvent.Invoke();
         }
     }

@@ -63,7 +63,7 @@ public class GameWaitPacket
     }
 }
 
-public class GameStart
+public class GameStartPacket
 {
     public short Size = 4; // 2Byte
     public PacketType Type = PacketType.GameStart; // 2Byte
