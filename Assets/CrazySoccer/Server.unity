@@ -622,7 +622,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ff6b085f81a983d45b7c29e17a900991, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GoalPostScript
-  goalTeamID: 0
+  goalTeamID: 1
 --- !u!61 &881818883
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -751,6 +751,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
   soccerBallTransform: {fileID: 2019494200}
   playerPrefab: {fileID: 8172785195547490190, guid: 46d04f7ee6eb76648ba3759a18649789, type: 3}
+  matchTimer: 180
+  isMatchRunning: 0
 --- !u!1 &1177574483
 GameObject:
   m_ObjectHideFlags: 0
@@ -908,7 +910,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ff6b085f81a983d45b7c29e17a900991, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GoalPostScript
-  goalTeamID: 0
+  goalTeamID: 2
 --- !u!61 &1433162016
 BoxCollider2D:
   m_ObjectHideFlags: 0
