@@ -147,38 +147,44 @@ public class GameManager : MonoBehaviour
         {
             SetGamePause(true);
 
-            SendGameWait(() =>
-            {
-                ServerManager.Instance.mainThreadQueue.Enqueue(() =>
-                {
-                    foreach (KeyValuePair<ushort, PlayerObject> item in playerObjects)
-                    {
-                        Rigidbody2D pRb = item.Value.GetComponent<Rigidbody2D>();
-                        if (pRb != null)
-                        {
-                            pRb.linearVelocity = Vector2.zero;
-                            item.Value.transform.position = (item.Key == 1) ? new Vector2(-18f, 0f) : new Vector2(18f, 0f);
-                        }
-                    }
-
-                    SendGameStart(() =>
-                    {
-                        ServerManager.Instance.mainThreadQueue.Enqueue(() =>
-                        {
-                            SetGamePause(false);
-
-                            // ★ 추가: 드디어 진짜 게임 시작! 타이머가 굴러가도록 스위치를 켭니다.
-                            matchTimer = 180f;
-                            isMatchRunning = true;
-
-                            Debug.Log("게임 시작! 조작 잠금 해제 및 타이머 시작됨.");
-                        });
-                    });
-                });
-            });
+            RunStartSequence();
         }
     }
 
+    private async void RunStartSequence()
+    {
+        Debug.Log("[서버] 2명 접속 완료! 5초 뒤 게임을 시작합니다...");
+
+        // 5초 대기 (이 동안 클라이언트는 로딩을 마칩니다)
+        await Task.Delay(5000);
+
+        ServerManager.Instance.mainThreadQueue.Enqueue(() =>
+        {
+            // 1. 경기장 위치 리셋
+            foreach (KeyValuePair<ushort, PlayerObject> item in playerObjects)
+            {
+                Rigidbody2D pRb = item.Value.GetComponent<Rigidbody2D>();
+                if (pRb != null)
+                {
+                    pRb.linearVelocity = Vector2.zero;
+                    item.Value.transform.position = (item.Key == 1) ? new Vector2(-18f, 0f) : new Vector2(18f, 0f);
+                }
+            }
+
+            // 2. 화면 가렸던 것을 풀어주며 게임 시작 패킷 발송
+            SendGameStart(() =>
+            {
+                ServerManager.Instance.mainThreadQueue.Enqueue(() =>
+                {
+                    SetGamePause(false);
+                    matchTimer = 180f;
+                    isMatchRunning = true;
+                    Debug.Log("게임 시작! 타이머가 흐릅니다.");
+                });
+            });
+        });
+    }
+    
     public async void SendGameWait(Action afterEvent = null)
     {
         GameWaitPacket gameWaitPacket = new GameWaitPacket();
