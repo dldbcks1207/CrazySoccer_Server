@@ -25,6 +25,7 @@ public class ServerManager : MonoBehaviour
     {
         packetHandlers.Add(PacketType.MoveInput, GameManager.Instance.MovePacketHandler);
         packetHandlers.Add(PacketType.KickInput, GameManager.Instance.KickPacketHandler);
+        packetHandlers.Add(PacketType.AnimationInput, GameManager.Instance.AnimationPacketHandler);
     }
 
     public void StartServer(int serverPort)

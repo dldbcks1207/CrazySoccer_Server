@@ -143,40 +143,53 @@ public class GameManager : MonoBehaviour
 
         SendNewPlayerPacket(playerID);
 
+        // ★ 수정: 2명이 꽉 찼을 때 즉시 멈추지 않고 몸풀기 시퀀스를 호출합니다!
         if (playerIDCursor == 3)
         {
+            StartWarmUpSequence();
+        }
+    }
+
+    // ★ 추가: 5초간 몸을 풀게 놔두고, 알아서 시작 시퀀스로 넘어가는 마법의 함수
+    private async void StartWarmUpSequence()
+    {
+        Debug.Log("[서버] 2명 접속 완료! 5초간 몸풀기 시간 시작.");
+
+        // 1. 5초간 대기 (이 동안 유저들은 자유롭게 움직이고 공을 찰 수 있습니다!)
+        // (isMatchRunning이 아직 false이기 때문에 타이머도 3분에 멈춰있고, 골을 넣어도 점수가 오르지 않습니다)
+        await Task.Delay(5000);
+
+        Debug.Log("[서버] 몸풀기 끝! 진짜 매치 시작 시퀀스 돌입.");
+
+        // 2. 5초 뒤, 메인 스레드에서 기존의 '화면 가림 -> 리셋 -> 시작' 콤보를 실행합니다.
+        ServerManager.Instance.mainThreadQueue.Enqueue(() =>
+        {
+            // 일단 애들 움직임을 멈춰!
             SetGamePause(true);
 
+            // 화면 가려!
             SendGameWait(() =>
             {
                 ServerManager.Instance.mainThreadQueue.Enqueue(() =>
                 {
-                    foreach (KeyValuePair<ushort, PlayerObject> item in playerObjects)
-                    {
-                        Rigidbody2D pRb = item.Value.GetComponent<Rigidbody2D>();
-                        if (pRb != null)
-                        {
-                            pRb.linearVelocity = Vector2.zero;
-                            item.Value.transform.position = (item.Key == 1) ? new Vector2(-18f, 0f) : new Vector2(18f, 0f);
-                        }
-                    }
+                    // 화면 가려진 틈을 타서 각자 진영으로 위치 리셋
+                    ResetMatch();
 
+                    // 다시 화면 열어!
                     SendGameStart(() =>
                     {
                         ServerManager.Instance.mainThreadQueue.Enqueue(() =>
                         {
+                            // 움직임 봉인 해제 & 진짜 게임 시작 (타이머 굴러감)
                             SetGamePause(false);
-
-                            // ★ 추가: 드디어 진짜 게임 시작! 타이머가 굴러가도록 스위치를 켭니다.
                             matchTimer = 180f;
                             isMatchRunning = true;
-
                             Debug.Log("게임 시작! 조작 잠금 해제 및 타이머 시작됨.");
                         });
                     });
                 });
             });
-        }
+        });
     }
 
     public async void SendGameWait(Action afterEvent = null)
@@ -299,6 +312,24 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    public void AnimationPacketHandler(PlayerSession session, BinaryReader br)
+    {
+        byte animNum = br.ReadByte();
+
+        // 방송용 패킷 조립
+        ReturnAnimationPacket returnPacket = new ReturnAnimationPacket();
+        returnPacket.playerID = session.PlayerID;
+        returnPacket.animNum = animNum;
+
+        byte[] packetBytes = returnPacket.Serialize();
+
+        // 방 안에 있는 모든 클라이언트에게 발송
+        foreach (var s in ServerManager.Instance.playerSessions.Values)
+        {
+            s.Stream.Write(packetBytes, 0, packetBytes.Length);
+        }
+    }
+    
     public void KickPacketHandler(PlayerSession session, BinaryReader br)
     {
         if (isGamePaused) return;
