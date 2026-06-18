@@ -102,26 +102,36 @@ public class PlayerObject : MonoBehaviour
         {
             if (hit.collider != null && hit.collider.gameObject != gameObject)
             {
-                if (hit.collider.TryGetComponent(out ServerBall ball))
-                {
-                    Vector2 kickDir = (hit.collider.transform.position - transform.position).normalized;
-                    kickDir.x = Mathf.Abs(kickDir.x) * sign;
+                Vector2 targetPos = hit.collider.transform.position;
+                Vector2 dirFromOrigin = targetPos - origin;
 
-                    if (isDriven)
-                        kickDir.y = 0;
-                    else
+                bool isTop = dirFromOrigin.y >= 0f;
+
+                bool isForward = (dirFromOrigin.x * sign) >= 0f;
+
+                if (isTop && isForward)
+                {
+                    if (hit.collider.TryGetComponent(out ServerBall ball))
+                    {
+                        Vector2 kickDir = (hit.collider.transform.position - transform.position).normalized;
+                        kickDir.x = Mathf.Abs(kickDir.x) * sign;
+
+                        if (isDriven)
+                            kickDir.y = 0;
+                        else
+                            kickDir.y += kickY;
+
+                        ball.ReceiveForce(kickDir.normalized, force / 100f * kickForce);
+                    }
+
+                    if (hit.collider.TryGetComponent(out PlayerObject otherPlayer))
+                    {
+                        Vector2 kickDir = (hit.collider.transform.position - transform.position).normalized;
+                        kickDir.x = Mathf.Abs(kickDir.x) * sign;
                         kickDir.y += kickY;
 
-                    ball.ReceiveForce(kickDir.normalized, force / 100f * kickForce);
-                }
-
-                if (hit.collider.TryGetComponent(out PlayerObject otherPlayer))
-                {
-                    Vector2 kickDir = (hit.collider.transform.position - transform.position).normalized;
-                    kickDir.x = Mathf.Abs(kickDir.x) * sign;
-                    kickDir.y += kickY;
-
-                    otherPlayer.ReceiveForce(kickDir.normalized, force / 100f * (kickForce * 70f));
+                        otherPlayer.ReceiveForce(kickDir.normalized, force / 100f * (kickForce * 70f));
+                    }
                 }
             }
         }

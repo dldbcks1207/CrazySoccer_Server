@@ -6,7 +6,9 @@ public enum PacketType : short
     MoveInput = 3,
     SyncWorld = 4,
     KickInput = 5,
-    GoalEvent = 6
+    GoalEvent = 6,
+    GameWait = 7,
+    GameStart = 8
 }
 
 public static class NetworkConfig
