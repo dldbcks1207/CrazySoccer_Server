@@ -11,6 +11,5 @@ public enum PacketType : short
 
 public static class NetworkConfig
 {
-    public const int ServerPort = 9000;
     public const int HeaderSize = 4;
 }

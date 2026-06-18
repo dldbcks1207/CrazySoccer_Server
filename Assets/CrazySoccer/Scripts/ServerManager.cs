@@ -25,7 +25,11 @@ public class ServerManager : MonoBehaviour
     {
         packetHandlers.Add(PacketType.MoveInput, GameManager.Instance.MovePacketHandler);
         packetHandlers.Add(PacketType.KickInput, GameManager.Instance.KickPacketHandler);
-        tcpListener = new TcpListener(IPAddress.Any, NetworkConfig.ServerPort);
+    }
+
+    public void StartServer(int serverPort)
+    {
+        tcpListener = new TcpListener(IPAddress.Any, serverPort);
         tcpListener.Start();
         Debug.Log("Server Started");
         tcpListener.BeginAcceptTcpClient(OnAcceptClient, null);
