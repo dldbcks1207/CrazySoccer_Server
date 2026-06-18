@@ -37,13 +37,13 @@ public class GameManager : MonoBehaviour
             {
                 matchTimer = 0f;
                 isMatchRunning = false; // 타이머 완전 종료
-                
+
                 // ★ 경기 종료! (모든 선수와 공을 그 자리에 얼려버립니다)
                 SetGamePause(true);
                 Debug.Log("=================================");
                 Debug.Log("            게임종료             ");
                 Debug.Log("=================================");
-                
+
                 // 나중에 여기에 '클라이언트들에게 게임 종료 화면 띄우라는 패킷'을 쏘시면 됩니다!
             }
         }
@@ -56,7 +56,7 @@ public class GameManager : MonoBehaviour
         Rigidbody2D ballRb = soccerBallTransform.GetComponent<Rigidbody2D>();
         if (ballRb != null)
         {
-            ballRb.simulated = !pause; 
+            ballRb.simulated = !pause;
         }
 
         foreach (var item in playerObjects.Values)
@@ -120,11 +120,11 @@ public class GameManager : MonoBehaviour
                         ServerManager.Instance.mainThreadQueue.Enqueue(() =>
                         {
                             SetGamePause(false);
-                            
+
                             // ★ 추가: 드디어 진짜 게임 시작! 타이머가 굴러가도록 스위치를 켭니다.
-                            matchTimer = 180f; 
-                            isMatchRunning = true; 
-                            
+                            matchTimer = 180f;
+                            isMatchRunning = true;
+
                             Debug.Log("게임 시작! 조작 잠금 해제 및 타이머 시작됨.");
                         });
                     });
@@ -179,16 +179,44 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public void SendGoalEvent(short scoredTeam)
+    public async void SendGoalEvent(short scoredTeam)
     {
+        // 1. 클라이언트들에게 골이 들어갔다고 알림 (점수판 업데이트용)
         GoalEventPacket goalEventPacket = new GoalEventPacket();
         goalEventPacket.ScoredTeam = scoredTeam;
-
         byte[] goalPacket = goalEventPacket.Serialize();
+
         foreach (var session in ServerManager.Instance.playerSessions.Values)
         {
             session.Stream.Write(goalPacket, 0, goalPacket.Length);
         }
+
+        Debug.Log($"[서버] {scoredTeam}팀 골! 5초간 세레머니 타임 시작.");
+
+        // 2. 공만 그 자리에 얼려버림 (유저들은 자유롭게 이동 가능)
+        Rigidbody2D ballRb = soccerBallTransform.GetComponent<Rigidbody2D>();
+        if (ballRb != null)
+        {
+            ballRb.linearVelocity = Vector2.zero;
+            ballRb.angularVelocity = 0f;
+            ballRb.simulated = false; // 공의 물리 연산 완전 정지!
+        }
+
+        // 3. 5초 대기 (세레머니 타임)
+        await Task.Delay(5000);
+
+        // 4. 5초 뒤 화면을 까맣게 가림 (GameWait)
+        SendGameWait(() =>
+        {
+            ServerManager.Instance.mainThreadQueue.Enqueue(() =>
+            {
+                // 5. 화면이 가려진 틈을 타서 공과 유저 위치를 중앙으로 리셋!
+                ResetMatch();
+
+                // 6. 위치 세팅이 끝났으니 화면을 다시 엶 (GameStart)
+                SendGameStart();
+            });
+        });
     }
 
     public void ResetMatch()
@@ -196,6 +224,7 @@ public class GameManager : MonoBehaviour
         Rigidbody2D ballRb = soccerBallTransform.GetComponent<Rigidbody2D>();
         if (ballRb != null)
         {
+            ballRb.simulated = true; // ★ 얼려놨던 공을 다시 녹여줌!
             ballRb.linearVelocity = Vector2.zero;
             ballRb.angularVelocity = 0f;
             soccerBallTransform.position = Vector2.zero;
